@@ -1,0 +1,420 @@
+Sender: LSF System <lsfadmin@c1u17n02>
+Subject: Job 697176: <CutFEM> in cluster <cluster1> Exited
+
+Job <CutFEM> was submitted from host <ln02> by user <zhanghe> in cluster <cluster1> at Sun Jan  4 21:41:25 2026
+Job was executed on host(s) <36*c1u17n02>, in queue <batch>, as user <zhanghe> in cluster <cluster1> at Sun Jan  4 21:41:24 2026
+                            <36*c2u05n02>
+                            <36*c4u01n04>
+                            <36*c1u10n04>
+                            <36*a3u01n02>
+                            <36*c6u24n04>
+                            <36*c2u15n04>
+                            <36*a3u22n04>
+</share/home/zhanghe> was used as the home directory.
+</share/home/zhanghe/cutfem_FSI/poisson> was used as the working directory.
+Started at Sun Jan  4 21:41:24 2026
+Terminated at Sun Jan  4 21:48:55 2026
+Results reported at Sun Jan  4 21:48:55 2026
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+
+#BSUB -J CutFEM
+#BSUB -n 288
+#BSUB -o %J.log
+#BSUB -e %J.err
+#BSUB -W 6000
+#BSUB -q batch
+#BSUB -R "span[ptile=36]"
+
+for r0 in 1 2 3 4 5 6; do
+	mpirun -n 144  ./cutfem -sol_order -1 -refine0 $r0 -dof_type Q3  \
+ 	-solver mumps -mumps_fillin 500 -solver_cond  \
+	-gp_type 1 -coeff1 1.0 -gamma2 0.1 
+#	-coeff2 $c2 +interior_only +no_jump 
+done
+
+------------------------------------------------------------
+
+Exited with exit code 255.
+
+Resource usage summary:
+
+    CPU time :                                   62241.00 sec.
+    Max Memory :                                 579960 MB
+    Average Memory :                             112776.52 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   1764 MB
+    Max Processes :                              155
+    Max Threads :                                301
+    Run time :                                   451 sec.
+    Turnaround time :                            450 sec.
+
+The output (if any) follows:
+
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=1): 8 elements.
+
+********** Level 1, 144 procs, 8 elems, LIF 18.00, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 8 elements, 1 part, 1 subdomain, time 0.05582s
+  1. Vol's/area by region: [-]:0.113097   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:0.84823    [0]:0          [+]:8.15177   
+  3. # elements by region: [-]:0          [0]:8          [+]:0         
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 8/8
+Building linear equations (8 elems, FE: Q3/Q3) ...
+  Element sizes: max/min = 5.00e-01/5.00e-01 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 3:8
+  # global unknowns: 343 (343 for the cut elements)
+  Total # quadrature points: 230104
+  # local nonzeros: max inproc/offproc 3364/11184, total 81685
+  Wall time: 0.99s, memory usage: 0.19GB
+Solving linear equations ...
+  solver MUMPS; nits: 1; residual: 0; time: 0.3112
+  Condition number: 8.41e+12
+L2err: 4.8563534938e-07; H1err: 1.0452016025e-05; mem: 0.21GB; time: 1
+  |u_h-u_H| = 3.33098e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=2): 64 elements.
+
+********** Level 2, 144 procs, 64 elems, LIF 2.25, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 64 elements, 1 part, 1 subdomain, time 0.03781s
+  1. Vol's/area by region: [-]:0.113097   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:1.36659    [0]:0          [+]:13.6334   
+  3. # elements by region: [-]:0          [0]:32         [+]:32        
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 32/32
+Building linear equations (64 elems, FE: Q3/Q3) ...
+  Element sizes: max/min = 2.50e-01/2.50e-01 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 3:32
+  # global unknowns: 1225 (973 for the cut elements)
+  Total # quadrature points: 234808
+  # local nonzeros: max inproc/offproc 1444/15498, total 373375
+  Wall time: 0.84s, memory usage: 0.20GB
+Solving linear equations ...
+  solver MUMPS; nits: 1; residual: 0; time: 0.1483
+  Condition number: 2.15e+16
+L2err: 2.3922241290e-08; H1err: 9.9588821716e-07; mem: 0.22GB; time: 0.84
+  |u_h-u_H| = 3.33098e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=3): 512 elements.
+
+********** Level 3, 144 procs, 512 elems, LIF 1.12, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 512 elements, 1 part, 1 subdomain, time 0.02095s
+  1. Vol's/area by region: [-]:0.113097   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:2.76853    [0]:0          [+]:24.2315   
+  3. # elements by region: [-]:8          [0]:128        [+]:376       
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 136/128
+Building linear equations (512 elems, FE: Q3/Q3) ...
+  Element sizes: max/min = 1.25e-01/1.25e-01 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 3:136
+  # global unknowns: 4591 (3764 for the cut elements)
+  Total # quadrature points: 244924
+  # local nonzeros: max inproc/offproc 11084/49878, total 1797895
+  Wall time: 0.8s, memory usage: 0.19GB
+Solving linear equations ...
+  solver MUMPS; nits: 1; residual: 0; time: 0.7324
+  Condition number: 7.24e+18
+L2err: 1.8923739475e-09; H1err: 1.0197110651e-06; mem: 0.25GB; time: 0.58
+  |u_h-u_H| = 3.33098e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=4): 4096 elements.
+
+********** Level 4, 144 procs, 4096 elems, LIF 1.02, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 4096 elements, 1 part, 1 subdomain, time 0.01598s
+  1. Vol's/area by region: [-]:0.113097   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:5.42514    [0]:0          [+]:45.5749   
+  3. # elements by region: [-]:280        [0]:416        [+]:3400      
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 696/416
+Building linear equations (4096 elems, FE: Q3/Q3) ...
+  Element sizes: max/min = 6.25e-02/6.25e-02 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 3:696
+  # global unknowns: 21259 (13594 for the cut elements)
+  Total # quadrature points: 371112
+  # local nonzeros: max inproc/offproc 186144/254257, total 10019287
+  Wall time: 2.6s, memory usage: 0.19GB
+Solving linear equations ...
+  solver MUMPS; nits: 1; residual: 0; time: 3.005
+  Condition number: 9.73e+24
+L2err: 8.9526129950e-11; H1err: 1.4689236657e-07; mem: 0.38GB; time: 0.62
+  |u_h-u_H| = 3.33098e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=5): 32768 elements.
+
+********** Level 5, 144 procs, 32768 elems, LIF 1.02, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 32768 elements, 1 part, 1 subdomain, time 0.08293s
+  1. Vol's/area by region: [-]:0.113097   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:10.8702    [0]:0          [+]:88.1298   
+  3. # elements by region: [-]:2920       [0]:1760       [+]:28088     
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 4680/1760
+Building linear equations (32768 elems, FE: Q3/Q3) ...
+  Element sizes: max/min = 3.12e-02/3.12e-02 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 3:4680
+  # global unknowns: 135505 (59687 for the cut elements)
+  Total # quadrature points: 2069264
+  # local nonzeros: max inproc/offproc 2432990/1144658, total 70131835
+  Wall time: 18s, memory usage: 0.20GB
+Solving linear equations ...
+  solver MUMPS; nits: 1; residual: 0; time: 20.85
+  Condition number: 3.61e+26
+L2err: 9.0058908842e-10; H1err: 5.1384668723e-06; mem: 1.00GB; time: 2.8
+  |u_h-u_H| = 3.33098e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=6): 262144 elements.
+
+********** Level 6, 144 procs, 262144 elems, LIF 1.02, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 262144 elements, 1 part, 1 subdomain, time 0.4675s
+  1. Vol's/area by region: [-]:0.113097   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:21.7142    [0]:0          [+]:173.286   
+  3. # elements by region: [-]:26080      [0]:6920       [+]:229144    
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 33000/6920
+Building linear equations (262144 elems, FE: Q3/Q3) ...
+  Element sizes: max/min = 1.56e-02/1.56e-02 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 3:33000
+  # global unknowns: 924625 (241760 for the cut elements)
+  Total # quadrature points: 11246660
+  # local nonzeros: max inproc/offproc 23649361/4712322, total 506387179
+  Wall time: 1.4e+02s, memory usage: 0.20GB
+Solving linear equations ...
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 108 PID 267240 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 109 PID 267241 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 110 PID 267242 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 111 PID 267243 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 112 PID 267244 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 113 PID 267245 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 114 PID 267246 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 115 PID 267247 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 116 PID 267248 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 117 PID 267249 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 118 PID 267250 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 119 PID 267251 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 120 PID 267252 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 121 PID 267253 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 122 PID 267254 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 123 PID 267255 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 124 PID 267256 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 125 PID 267257 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 126 PID 267258 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 127 PID 267259 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 128 PID 267260 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 129 PID 267261 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 130 PID 267262 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 131 PID 267263 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 132 PID 267264 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 133 PID 267265 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 134 PID 267266 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 135 PID 267267 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 136 PID 267268 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 137 PID 267269 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 138 PID 267270 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 139 PID 267271 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 140 PID 267272 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 141 PID 267273 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 142 PID 267274 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   RANK 143 PID 267275 RUNNING AT c1u10n04
+=   KILLED BY SIGNAL: 9 (Killed)
+===================================================================================
+
+
+PS:
+
+Read file <697176.err> for stderr output of this job.
+

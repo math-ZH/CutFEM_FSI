@@ -1,0 +1,202 @@
+Sender: LSF System <lsfadmin@a3u24n03>
+Subject: Job 689237: <CutFEM> in cluster <cluster1> Done
+
+Job <CutFEM> was submitted from host <ln02> by user <zhanghe> in cluster <cluster1> at Tue Dec 30 00:01:08 2025
+Job was executed on host(s) <36*a3u24n03>, in queue <batch>, as user <zhanghe> in cluster <cluster1> at Tue Dec 30 00:01:08 2025
+                            <36*a3u17n01>
+                            <36*c6u03n04>
+                            <36*c3u12n02>
+</share/home/zhanghe> was used as the home directory.
+</share/home/zhanghe/cutfem_FSI/poisson> was used as the working directory.
+Started at Tue Dec 30 00:01:08 2025
+Terminated at Tue Dec 30 00:02:39 2025
+Results reported at Tue Dec 30 00:02:39 2025
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+
+#BSUB -J CutFEM
+#BSUB -n 144
+#BSUB -o %J.log
+#BSUB -e %J.err
+#BSUB -W 6000
+#BSUB -q batch
+#BSUB -R "span[ptile=36]"
+
+for r0 in 2 3 4 5 6 7; do
+	mpirun -n 144  ./cutfem -sol_order -100 -refine0 $r0 -dof_type Q1 \
+ 	-solver minres -solver_rtol 1e-12  -solver_btol 1e-12 -solver_cond
+done
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   7273.00 sec.
+    Max Memory :                                 7055 MB
+    Average Memory :                             2990.73 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              8
+    Max Threads :                                10
+    Run time :                                   90 sec.
+    Turnaround time :                            91 sec.
+
+The output (if any) follows:
+
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=2): 64 elements.
+
+********** Level 2, 144 procs, 64 elems, LIF 2.25, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 64 elements, 1 part, 1 subdomain, time 0.009316s
+  1. Vol's/area by region: [-]:0.886903   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:13.6334    [0]:0          [+]:1.36659   
+  3. # elements by region: [-]:32         [0]:32         [+]:0         
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 64/32
+Building linear equations (64 elems, FE: Q1/Q1) ...
+  Element sizes: max/min = 2.50e-01/2.50e-01 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 1:64
+  # global unknowns: 125 (39 for the cut elements)
+  Total # quadrature points: 78056
+  # local nonzeros: max inproc/offproc 25/208, total 5239
+  Wall time: 0.11s, memory usage: 0.19GB
+Solving linear equations ...
+  solver MINRES; nits: 18; residual: 5.52947e-11; time: 0.01297
+  Condition number: 6.89e+02
+L2err: 4.0540588632e-02; H1err: 6.2774494981e-02; mem: 0.19GB; time: 0.064
+  |u_h-u_H| = 4.94300e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=3): 512 elements.
+
+********** Level 3, 144 procs, 512 elems, LIF 1.12, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 512 elements, 1 part, 1 subdomain, time 0.00594s
+  1. Vol's/area by region: [-]:0.886903   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:24.2315    [0]:0          [+]:2.76853   
+  3. # elements by region: [-]:376        [0]:128        [+]:8         
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 504/128
+Building linear equations (512 elems, FE: Q1/Q1) ...
+  Element sizes: max/min = 1.25e-01/1.25e-01 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 1:504
+  # global unknowns: 728 (154 for the cut elements)
+  Total # quadrature points: 113508
+  # local nonzeros: max inproc/offproc 134/512, total 40941
+  Wall time: 0.02s, memory usage: 0.19GB
+Solving linear equations ...
+  solver MINRES; nits: 34; residual: 4.05917e-11; time: 0.02858
+  Condition number: 2.12e+10
+L2err: 9.3164962850e-03; H1err: 1.7958800810e-02; mem: 0.20GB; time: 0.043
+  |u_h-u_H| = 4.94417e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=4): 4096 elements.
+
+********** Level 4, 144 procs, 4096 elems, LIF 1.02, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 4096 elements, 1 part, 1 subdomain, time 0.009269s
+  1. Vol's/area by region: [-]:0.886903   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:45.5749    [0]:0          [+]:5.42514   
+  3. # elements by region: [-]:3400       [0]:416        [+]:280       
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 3816/416
+Building linear equations (4096 elems, FE: Q1/Q1) ...
+  Element sizes: max/min = 6.25e-02/6.25e-02 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 1:3816
+  # global unknowns: 4766 (696 for the cut elements)
+  Total # quadrature points: 448400
+  # local nonzeros: max inproc/offproc 2071/2158, total 311837
+  Wall time: 0.051s, memory usage: 0.20GB
+Solving linear equations ...
+  solver MINRES; nits: 56; residual: 3.95094e-11; time: 0.03731
+  Condition number: 9.89e+08
+L2err: 2.2211358455e-03; H1err: 5.0136491925e-03; mem: 0.20GB; time: 0.051
+  |u_h-u_H| = 4.94043e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=5): 32768 elements.
+
+********** Level 5, 144 procs, 32768 elems, LIF 1.02, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 32768 elements, 1 part, 1 subdomain, time 0.05109s
+  1. Vol's/area by region: [-]:0.886903   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:88.1298    [0]:0          [+]:10.8702   
+  3. # elements by region: [-]:28088      [0]:1760       [+]:2920      
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 29848/1760
+Building linear equations (32768 elems, FE: Q1/Q1) ...
+  Element sizes: max/min = 3.12e-02/3.12e-02 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 1:29848
+  # global unknowns: 33732 (3117 for the cut elements)
+  Total # quadrature points: 3038504
+  # local nonzeros: max inproc/offproc 17802/10382, total 2431109
+  Wall time: 0.33s, memory usage: 0.20GB
+Solving linear equations ...
+  solver MINRES; nits: 75; residual: 4.14545e-11; time: 0.06056
+  Condition number: 5.10e+10
+L2err: 5.3090567050e-04; H1err: 1.8457254519e-03; mem: 0.21GB; time: 0.22
+  |u_h-u_H| = 4.93912e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=6): 262144 elements.
+
+********** Level 6, 144 procs, 262144 elems, LIF 1.02, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 262144 elements, 1 part, 1 subdomain, time 0.2913s
+  1. Vol's/area by region: [-]:0.886903   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:173.286    [0]:0          [+]:21.7142   
+  3. # elements by region: [-]:229144     [0]:6920       [+]:26080     
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 236064/6920
+Building linear equations (262144 elems, FE: Q1/Q1) ...
+  Element sizes: max/min = 1.56e-02/1.56e-02 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 1:236064
+  # global unknowns: 251660 (13048 for the cut elements)
+  Total # quadrature points: 21728452
+  # local nonzeros: max inproc/offproc 144897/43421, total 19190141
+  Wall time: 2.2s, memory usage: 0.20GB
+Solving linear equations ...
+  solver MINRES; nits: 144; residual: 4.80105e-11; time: 0.3587
+  Condition number: 5.75e+15
+L2err: 1.2962155855e-04; H1err: 6.4861037610e-04; mem: 0.21GB; time: 1
+  |u_h-u_H| = 4.93870e-01
+Sphere: center=(0.5 0.5 0.5), radius=0.3
+Initial refinement (refine0=7): 2097152 elements.
+
+********** Level 7, 144 procs, 2097152 elems, LIF 1.02, refine time: 0
+Resolving/merging interface elements: *** phgXFEMInfo: 2097152 elements, 1 part, 1 subdomain, time 1.813s
+  1. Vol's/area by region: [-]:0.886903   [0]:1.13097    [+]:0         
+  2. Face areas by region: [-]:343.567    [0]:0          [+]:43.4326   
+  3. # elements by region: [-]:1845880    [0]:27824      [+]:223448    
+  To check: total volume == 1[-] + 1[+], total interface area == 1[0] + 2[0]
+*** phgXFEMInfo: # total/interface elements in the induced meshes
+  M0: 1873704/27824
+Building linear equations (2097152 elems, FE: Q1/Q1) ...
+  Element sizes: max/min = 7.81e-03/7.81e-03 = 1
+  # cut elements by FE order:
+  # non-cut elements by FE order: 1:1873704
+  # global unknowns: 1936466 (53951 for the cut elements)
+  Total # quadrature points: 164035840
+  # local nonzeros: max inproc/offproc 1163786/178996, total 152166957
+  Wall time: 17s, memory usage: 0.23GB
+Solving linear equations ...
+  solver MINRES; nits: 290; residual: 5.27799e-11; time: 2.377
+  Condition number: 7.70e+16
+L2err: 3.1995438438e-05; H1err: 2.2947612231e-04; mem: 0.29GB; time: 4.1
+  |u_h-u_H| = 4.93859e-01
+
+
+PS:
+
+Read file <689237.err> for stderr output of this job.
+
