@@ -503,12 +503,12 @@ BOOLEAN active_mesh_bry(int pno, XFEM_INFO *xi, ELEMENT *e, int face)
 static void
 ghost_penalty1(SOLVER *solver, XFEM_INFO *xi, DOF *u_h, 
 	ELEMENT *e, int face, ELEMENT *e1, int face1)
-/* Implement ghost penalty under specific requrement of faces */
+/* Implement ghost penalty under specific requrement of faces: face based type */
 {
 	assert(face >= 0 && face1 >= 0 && e1 != NULL);
 
 	/* if dof_type = DG, don't implement ghost penalty */
-	if (u_h->type->fe_space = FE_L2)
+	if (u_h->type->fe_space == FE_L2 || gamma2 == 0)
 		return;
 
 	GRID *g = xi->g;
@@ -604,19 +604,21 @@ ghost_penalty1(SOLVER *solver, XFEM_INFO *xi, DOF *u_h,
 static void
 ghost_penalty2(SOLVER *solver, XFEM_INFO *xi, DOF *u_h, 
 	ELEMENT *e, int face, ELEMENT *e1, int face1)
-/* Implement ghost penalty under specific requrement of faces */
-{
+/* Implement ghost penalty under specific requrement of faces: element based type */
+{		
 	assert(face >= 0 && face1 >= 0 && e1 != NULL);
 
 	/* if dof_type = DG, don't implement ghost penalty */
-	if (u_h->type->fe_space = FE_L2 || gamma2 == 0)
+	if (u_h->type->fe_space == FE_L2 || gamma2 == 0) {
+		phgPrintf("Dof_type == DG, don't implement ghost penalty!\n");
 		return;
+	}
 
 	GRID *g = xi->g;
   int n, n1, p;   /* p = polynomial order */
   INT I, J;
-  int i, j;
-  FLOAT val, a, nv[Dim], *rule;
+  int i, j, k;
+  FLOAT val, nv[Dim], *rule;
 	int eno = e->index, eno1 = e1->index;
 	FLOAT h, G2; /* G2 = coeff*gamma2*h^(2k-1)/[(k-1)!]*/
 	QCACHE *qc;
@@ -626,9 +628,13 @@ ghost_penalty2(SOLVER *solver, XFEM_INFO *xi, DOF *u_h,
 		ELEMENT *tmp = e; e = e1; e1 = tmp;
 		i = face; face = face1; face1 = i;
 		j = eno; eno = eno1; eno1 = j;
-		if (xi->info[eno].mark != 0)
+		if (xi->info[eno].mark != 0) {
+			phgPrintf("Non-cut patch, don't implement ghost penalty!\n");
 			return;
+		}
 	}
+
+	phgPrintf("\nGhost_penalty on (elem_%d,face_%d), (elem_%d,face1_%d)\n", eno, face, eno1, face1);
 
 	qc = phgQCNew(QD_DEFAULT, u_h);
 	n = n1 = DofNBas(u_h, e);
@@ -639,12 +645,19 @@ ghost_penalty2(SOLVER *solver, XFEM_INFO *xi, DOF *u_h,
 	else if (xi->nd == 0)
 		G2 = 0.5 * coeff[0] * gamma2 / (h * h);
 
+/* Now interface cuts element e, and patch(e,e1) */
 ELEMENT *e_list[2]={e, e1};
-for (int n = 0; n < 2; n++) {
+/* If face is not boundary of pno-th active mesh,
+ * then implement ghost penalty of space V_{h,pno} */
+for (int pno = 0; pno < xi->nd; pno++) {
+	if (!active_mesh_bry(pno, xi, e, face)) {
+		phgPrintf("(e_%d, face_%d) is not bdry of %d-th active mesh\n", eno, face, pno);
+
+		for (int k = 0; k < 2; k++) {
 #if Dim == 3
-	rule = phgQuadGetRule3D(g, e_list[n], 2 * DofTypeOrder(u_h, e_list[n]) /*- 2*/);
-#else
-	rule = phgQuadGetRule2D(g, e_list[n], 2 * DofTypeOrder(u_h, e_list[n]) /*- 2*/);
+	rule = phgQuadGetRule3D(g, e_list[k], 2 * DofTypeOrder(u_h, e_list[k]) /*- 2*/);
+#else 
+	rule = phgQuadGetRule2D(g, e_list[k], 2 * DofTypeOrder(u_h, e_list[k]) /*- 2*/);
 #endif
 	phgQCSetRule(qc, rule, -1.);
 
@@ -658,20 +671,21 @@ for (int n = 0; n < 2; n++) {
 	for (i = 0; i < n + n1; i++) {
 		/* loop on {basis funcs in e} \cup {basis funcs in e1} */
 		for (j = 0; j < n + n1; j++) {
-			/* -----------------------------------------------------------------------
-			 * Face ghost penalty: interior face and face covered by interface
-			 * ----------------------------------------------------------------------*/
 			val = 0.0;
-			/* sum_{k=1}^p \int_{e or e1} G2 [u][v] */
-			a = phgQCIntegrate(qc, Eid(j), Q_BAS, j, qc, Eid(i), Q_BAS, i);
+			/* \int_{e or e1} G2 [u^e][v^e] */
+			val = phgQCIntegrate(qc, Eid(j), Q_BAS, j, qc, Eid(i), Q_BAS, i);
 			if ((i < n) != (j < n))
-				a = -a;
-			val += G2 * a;
-			/* If face is not boundary of pno-th active mesh,
-				 then implement ghost penalty of space V_{h,pno} */
-			for (int pno = 0; pno < xi->nd; pno++) {
-				if (!active_mesh_bry(pno, xi, e, face))
-				{
+				val = -val;
+			// debug
+			if (k == 0) {
+				for (int m = 0; m < sizeof(rule) / sizeof(rule[0]); m++) {
+					phgPrintf("%f ", (double)rule[m]);
+				}
+				// phgPrintf("Rule on elem_%d, bas on (elem_%d, elem_%d), (bas_%d, bas_%d) = %e\n",
+				// 		e_list[0]->index, Eid(i), Eid(j), i, j, val);
+				phgPrintf("\n");
+			}
+			val += G2 * val;
 					I = phgXFEMSolverMapE2G(xi, solver, 0, pno, Ele(i), Bas(i));
 					J = phgXFEMSolverMapE2G(xi, solver, 0, pno, Ele(j), Bas(j));
 					phgSolverAddGlobalMatrixEntry(solver, I, J, val);
