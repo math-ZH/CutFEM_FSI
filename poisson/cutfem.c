@@ -68,7 +68,7 @@
  */
 
 /* input MG.h */
-#include "inexact_xasp.h"
+// #include "inexact_xasp.h"
 
 BOOLEAN use_pc = FALSE;
 
@@ -79,7 +79,7 @@ static VEC *F[Dim];
 static FLOAT gammat = 0.0;
 
 /* The coefficients */
-static FLOAT coeff[] = {1.0, 2.0};
+static FLOAT coeff[] = {0.5, 2.0};
 
 #if 1
 /* Round-robin: 0, 1, 0, 1, 0, 1, ... */
@@ -92,7 +92,7 @@ static FLOAT coeff[] = {1.0, 2.0};
 #endif
 
 /* The IP and ghost parameters */
-static FLOAT beta = 1.0, gamma0 = 100.0, gamma1 = 0.1, gamma2 = 0.1;
+static FLOAT beta = 1.0, gamma0 = 10.0, gamma1 = 0.1, gamma2 = 0.1;
 static int gp_type = 1;	/* Ghost penalty type: 0.Face_based, 1.Element_based */
 
 static FLOAT xc = 0.5, yc = 0.5, zc = 0.5, c = 0.3;
@@ -112,7 +112,7 @@ BOOLEAN no_jump = FALSE;
  *		. the option -interior is forced
  *		. npart is set to 1.
  */
-static INT sol_order = 1;
+static INT sol_order = -1;
 
 static BOOLEAN dump_solver = FALSE, dump_reorder = TRUE;
 
@@ -476,7 +476,7 @@ BOOLEAN active_mesh_bry(int pno, XFEM_INFO *xi, ELEMENT *e, int face)
 
 	#ifdef PHG_TO_P4EST
 	#define c(k,l) e->corners[k][l]
-	assert(xi->info[e->index].mark == 0 && Dim == 3);
+	// assert(xi->info[e->index].mark == 0 && Dim == 3);
 
 	/* get verteces of face, and use the level set function to judge */
 	for (i = 0; i < n; i++) {
@@ -501,22 +501,21 @@ BOOLEAN active_mesh_bry(int pno, XFEM_INFO *xi, ELEMENT *e, int face)
 }
 
 static void
-ghost_penalty1(SOLVER *solver, XFEM_INFO *xi, DOF *u_h, 
-	ELEMENT *e, int face, ELEMENT *e1, int face1)
-/* Implement ghost penalty under specific requrement of faces: face based type */
-{
+ghost_penalty(SOLVER *solver, XFEM_INFO *xi, DOF *u_h, 
+	ELEMENT *e, int face, ELEMENT *e1, int face1, int gp_type)
+{		
 	assert(face >= 0 && face1 >= 0 && e1 != NULL);
 
 	/* if dof_type = DG, don't implement ghost penalty */
-	if (u_h->type->fe_space == FE_L2 || gamma2 == 0)
+	if (u_h->type->fe_space == FE_L2 || gamma2 == 0) 
 		return;
 
 	GRID *g = xi->g;
   int n, n1, p;   /* p = polynomial order */
   INT I, J;
   int i, j, k;
-  FLOAT val, a, nv[Dim], *rule;
 	int eno = e->index, eno1 = e1->index;
+	FLOAT a, val, nv[Dim], *rule;
 	FLOAT h, G2; /* G2 = coeff*gamma2*h^(2k-1)/[(k-1)!]*/
 	QCACHE *qc;
 
@@ -534,6 +533,32 @@ ghost_penalty1(SOLVER *solver, XFEM_INFO *xi, DOF *u_h,
   p = DofTypeOrder(u_h, e);
   h = phgGeomGetFaceDiameter(g, e, face);
 
+	#define Sel(i, o, o1)	(i < n ? o : o1)
+	#define Ele(i)	Sel(i, e, e1)
+	#define Bas(i)	Sel(i, i, i - n)
+	#define Fac(i)	Sel(i, face, face1)
+	#define Eid(i)	Ele(i)->index
+
+/* If face is not boundary of pno-th active mesh,
+ * then implement ghost penalty of space V_{h,pno} */
+for (int pno = 0; pno < xi->nd; pno++) {
+	if (!active_mesh_bry(pno, xi, e, face)) {
+		/* Now interface cuts element e, and patch(e,e1) */
+		ELEMENT *e_list[2]={e, e1};
+		for (int k = 0; k < 2; k++) {
+
+if (gp_type){
+/* ghost penalty type: element based type */
+#if Dim == 3
+	rule = phgQuadGetRule3D(g, e_list[k], 2 * DofTypeOrder(u_h, e_list[k]) /*- 2*/);
+#else 
+	rule = phgQuadGetRule2D(g, e_list[k], 2 * DofTypeOrder(u_h, e_list[k]) /*- 2*/);
+#endif
+	phgQCSetRule(qc, rule, -1.);
+	G2 = Coeff(pno) * gamma2 / (h * h);
+}
+else if (gp_type == 0) {
+/* ghost penalty type: face based type */
 #if Dim == 3
     rule = phgQuadGetRule2D(g, e, face, 2 * p);
 #else
@@ -542,164 +567,46 @@ ghost_penalty1(SOLVER *solver, XFEM_INFO *xi, DOF *u_h,
 	phgQCSetRule(qc, rule, -1.);
   phgGeomGetFaceOutNormal(g, e, face, nv);
   phgQCSetConstantNormal(qc, nv);
-
-#define Sel(i, o, o1)	(i < n ? o : o1)
-#define Ele(i)	Sel(i, e, e1)
-#define Fac(i)	Sel(i, face, face1)
-#define Bas(i)	Sel(i, i, i - n)
-#define Eid(i)	Ele(i)->index
-#define Quad(fid1, proj1, i1, fid2, proj2, i2) \
-	    phgQCIntegrateFace( \
-				qc, Eid(i1), Fac(i1), fid1, proj1, Bas(i1), \
-				qc, Eid(i2), Fac(i2), fid2, proj2, Bas(i2))
-
-	/* loop on {basis funcs in e} \cup {basis funcs in e1} */
-  for (i = 0; i < n + n1; i++) {
-	/* loop on {basis funcs in e} \cup {basis funcs in e1} */
-		for (j = 0; j < n + n1; j++) {
-
-	  /* skip jumps for interior face and continuous element */
-	  	if (u_h->type->fe_space == FE_H1
-#ifdef PHG_TO_P4EST
-		/* e, e1 are equal size (unless dependent DOFs are removed) */
-		&& e->generation == e1->generation
-#endif	/* defined(PHG_TO_P4EST) */
-			)	{
-			/* -----------------------------------------------------------------------
-			 * Face ghost penalty: interior face and face covered by interface
-			 * ----------------------------------------------------------------------*/
-				val = 0.0;
-				/* sum_{k=1}^p \int G2 [\grad^k u][\grad^k v] */
-				for (k = 1; k <= p; k++) {
-					if (xi->nd == 1)
-						G2 = coeff[0] * coeff[1] * (1.0 / ( coeff[0] + coeff[1])) * gamma2
-												* (FLOAT)pow(h, 2*k-1) / factorial(k-1);
-					if (xi->nd == 0)
-						G2 = 0.5 * coeff[0] * gamma2 * (FLOAT)pow(h, 2*k-1) / factorial(k-1);
-					a = Quad(Q_GRAD,  PROJ_DOT, j, Q_GRAD,  PROJ_DOT, i);
-					if ((i < n) != (j < n)) 
-							a = -a;
-					val += G2 * a;
-				}
-				/* If face is not boundary of pno-th active mesh,
-					 then implement ghost penalty of space V_{h,pno} */
-				for (int pno = 0; pno < xi->nd; pno++) {
-					if (!active_mesh_bry(pno, xi, e, face)) {
-						I = phgXFEMSolverMapE2G(xi, solver, 0, pno, Ele(i), Bas(i));
-						J = phgXFEMSolverMapE2G(xi, solver, 0, pno, Ele(j), Bas(j));
-						phgSolverAddGlobalMatrixEntry(solver, I, J, val);
-					}
-				}
-			}
-		}
 }
-#undef Sel
-#undef Ele
-#undef Fac
-#undef Bas
-#undef Eid
-#undef Quad
-}
-
-static void
-ghost_penalty2(SOLVER *solver, XFEM_INFO *xi, DOF *u_h, 
-	ELEMENT *e, int face, ELEMENT *e1, int face1)
-/* Implement ghost penalty under specific requrement of faces: element based type */
-{		
-	assert(face >= 0 && face1 >= 0 && e1 != NULL);
-
-	/* if dof_type = DG, don't implement ghost penalty */
-	if (u_h->type->fe_space == FE_L2 || gamma2 == 0) {
-		phgPrintf("Dof_type == DG, don't implement ghost penalty!\n");
-		return;
-	}
-
-	GRID *g = xi->g;
-  int n, n1, p;   /* p = polynomial order */
-  INT I, J;
-  int i, j, k;
-  FLOAT val, nv[Dim], *rule;
-	int eno = e->index, eno1 = e1->index;
-	FLOAT h, G2; /* G2 = coeff*gamma2*h^(2k-1)/[(k-1)!]*/
-	QCACHE *qc;
-
-	/* switch (e,face) and (e1,face1) such that interface cuts element e */
-	if (xi->info[eno].mark != 0) {
-		ELEMENT *tmp = e; e = e1; e1 = tmp;
-		i = face; face = face1; face1 = i;
-		j = eno; eno = eno1; eno1 = j;
-		if (xi->info[eno].mark != 0) {
-			phgPrintf("Non-cut patch, don't implement ghost penalty!\n");
-			return;
-		}
-	}
-
-	phgPrintf("\nGhost_penalty on (elem_%d,face_%d), (elem_%d,face1_%d)\n", eno, face, eno1, face1);
-
-	qc = phgQCNew(QD_DEFAULT, u_h);
-	n = n1 = DofNBas(u_h, e);
-  p = DofTypeOrder(u_h, e);
-  h = phgGeomGetFaceDiameter(g, e, face);
-	if (xi->nd == 1)
-		G2 = coeff[0] * coeff[1] * (1.0 / (coeff[0] + coeff[1])) * gamma2 / (h * h);
-	else if (xi->nd == 0)
-		G2 = 0.5 * coeff[0] * gamma2 / (h * h);
-
-/* Now interface cuts element e, and patch(e,e1) */
-ELEMENT *e_list[2]={e, e1};
-/* If face is not boundary of pno-th active mesh,
- * then implement ghost penalty of space V_{h,pno} */
-for (int pno = 0; pno < xi->nd; pno++) {
-	if (!active_mesh_bry(pno, xi, e, face)) {
-		phgPrintf("(e_%d, face_%d) is not bdry of %d-th active mesh\n", eno, face, pno);
-
-		for (int k = 0; k < 2; k++) {
-#if Dim == 3
-	rule = phgQuadGetRule3D(g, e_list[k], 2 * DofTypeOrder(u_h, e_list[k]) /*- 2*/);
-#else 
-	rule = phgQuadGetRule2D(g, e_list[k], 2 * DofTypeOrder(u_h, e_list[k]) /*- 2*/);
-#endif
-	phgQCSetRule(qc, rule, -1.);
-
-#define Sel(i, o, o1)	(i < n ? o : o1)
-#define Ele(i)	Sel(i, e, e1)
-#define Fac(i)	Sel(i, face, face1)
-#define Bas(i)	Sel(i, i, i - n)
-#define Eid(i)	Ele(i)->index
 
 	/* loop on {basis funcs in e} \cup {basis funcs in e1} */
 	for (i = 0; i < n + n1; i++) {
 		/* loop on {basis funcs in e} \cup {basis funcs in e1} */
 		for (j = 0; j < n + n1; j++) {
 			val = 0.0;
-			/* \int_{e or e1} G2 [u^e][v^e] */
-			val = phgQCIntegrate(qc, Eid(j), Q_BAS, j, qc, Eid(i), Q_BAS, i);
-			if ((i < n) != (j < n))
+			if (gp_type){
+				/* \int_{e or e1} G2 [u^e][v^e] */
+				val = phgQCIntegrate(qc, Eid(j), Q_BAS, Bas(j), qc, Eid(i), Q_BAS, Bas(i));
+				if ((i < n) != (j < n))
 				val = -val;
-			// debug
-			if (k == 0) {
-				for (int m = 0; m < sizeof(rule) / sizeof(rule[0]); m++) {
-					phgPrintf("%f ", (double)rule[m]);
-				}
-				// phgPrintf("Rule on elem_%d, bas on (elem_%d, elem_%d), (bas_%d, bas_%d) = %e\n",
-				// 		e_list[0]->index, Eid(i), Eid(j), i, j, val);
-				phgPrintf("\n");
+				val += G2 * val;
 			}
-			val += G2 * val;
+			else {
+				/* sum_{k=1}^p \int G2 [\grad^k u][\grad^k v] */
+				for (k = 1; k <= p; k++) {
+					G2 = Coeff(pno) * gamma2 * (FLOAT)pow(h, 2*k-1) / factorial(k-1);
+					a = phgQCIntegrateFace(qc, Eid(j), Fac(j), Q_GRAD, PROJ_DOT, Bas(j),
+																 qc, Eid(i), Fac(i), Q_GRAD, PROJ_DOT, Bas(i));
+					if ((i < n) != (j < n)) 
+							a = -a;
+					val += G2 * a;
+				}
+			}
 					I = phgXFEMSolverMapE2G(xi, solver, 0, pno, Ele(i), Bas(i));
 					J = phgXFEMSolverMapE2G(xi, solver, 0, pno, Ele(j), Bas(j));
 					phgSolverAddGlobalMatrixEntry(solver, I, J, val);
 				}
 			}
+			phgFree(rule);
 		}
 	}
 }
+
 #undef Sel
 #undef Ele
-#undef Fac
 #undef Bas
+#undef Fac
 #undef Eid
-#undef Quad
 }
 
 static void
@@ -841,8 +748,8 @@ do_face(SOLVER *solver, XFEM_INFO *xi, QCACHE *qc[],
 	i = phgQCGetOrder(qc[pno1], e1->index);
 	if (p < i)
 	    p = i;
-	G0 = 0.5 * (Coeff(pno) + Coeff(pno1)) * gamma0 * p * (FLOAT)p / h;
-	G1 = 0.5 * (Coeff(pno) + Coeff(pno1)) * gamma1 * h / (p * (FLOAT)p);
+	G0 = Coeff(pno) * Coeff(pno1) / (Coeff(pno) + Coeff(pno1)) * gamma0 * p * (FLOAT)p / h;
+	G1 = Coeff(pno) * Coeff(pno1) / (Coeff(pno) + Coeff(pno1)) * gamma1 * h / (p * (FLOAT)p);
 	Gt = 0.5 * (Coeff(pno) + Coeff(pno1)) * gammat * h / (p * (FLOAT)p);
     }
 
@@ -1211,10 +1118,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 		eno1 = e1->index;
 		/* face is not on boundary, then probablly implement ghost penalty */
 		if (gamma2 != 0)
-			if (gp_type)	/* Element_based type */
-				ghost_penalty2(solver, xi, u_h[0], e, face, e1, face1);
-			else /* Face_based type */
-				ghost_penalty1(solver, xi, u_h[0], e, face, e1, face1);
+			ghost_penalty(solver, xi, u_h[0], e, face, e1, face1, gp_type);
 	    }
 	    nr = phgXFEMGetRulesFace(xi, eno, face, -1, &rl);
 	    /*assert(nr > 0 || xi->nd <= xi->npart || xi->g_tet != NULL);*/
@@ -1689,15 +1593,15 @@ break;
 	solver = phgXFEMSolverCreate(xi, SOLVER_DEFAULT, 0, u_h, NULL);
 	solver->mat->handle_bdry_eqns = FALSE;
 	solver->rtol = solver->btol = 1e-12;
-	if (use_pc) {
-      phgSolverXASPSetMG(pc, g, u_h[0]->type->order);
-      phgSolverXASPSetXFEMINFO(pc, xi); 
-      pc = phgMat2Solver(SOLVER_XASP, solver->mat);
-      pc->maxit = 1;
-      pc->monitor = FALSE;
-      pc->warn_maxit = FALSE;
-      phgSolverSetPC(solver, pc, NULL);
-	}
+	// if (use_pc) {
+  //     phgSolverXASPSetMG(pc, g, u_h[0]->type->order);
+  //     phgSolverXASPSetXFEMINFO(pc, xi); 
+  //     pc = phgMat2Solver(SOLVER_XASP, solver->mat);
+  //     pc->maxit = 1;
+  //     pc->monitor = FALSE;
+  //     pc->warn_maxit = FALSE;
+  //     phgSolverSetPC(solver, pc, NULL);
+	// }
 
 	t = phgGetTime(NULL);
 	f_h = phgXFEMDofNew(xi, DOF_DEFAULT, 1, "f1_h", DofNoAction);
