@@ -41,7 +41,7 @@
  * 	\Omega^- := \Omega \cap \{x: L(x)<0\},
  * 	\Omega^+ := \Omega \cap \{x: L(x)>0\},
  * 	\Gamma	 := \Omega \cap \{x: L(x)=0\},
- * 	a := COEFF1 for x\in\Omega^- and COEFF2 for x\in\Omega^+,
+ * 	a := COEFF1 for x\in\Omega^- and COEFF32 for x\in\Omega^+,
  * and L(x) is the level-set function defined by ls_func(). In this case the
  * jump conditions at the interface are given by:
  *		      [u] = j_D,	on \Gamma,
@@ -70,7 +70,7 @@
 /* input MG.h */
 
 static BOOLEAN LDG = FALSE;
-static int Q_BAS1, Q_BAS2, Q_BAS3;
+static int Q_BAS1, Q_BAS2, Q_BAS3, Q_vecBAS[3];
 static MAT *B[Dim];
 static VEC *F[Dim];
 static FLOAT gammat = 0.0;
@@ -231,11 +231,20 @@ func_grad_u(FLOAT x, FLOAT y, FLOAT z, FLOAT *res, void *parm)
 }
 
 /* the jump/boundary functions */
-static int
-func_gD(FLOAT x, FLOAT y, FLOAT z, FLOAT *res, void *parm)
-{
-    return func_u(x, y, z, res, parm);
+#define DEFINE_FUNC_GD(n) \
+static int func_gD_##n(FLOAT x, FLOAT y, FLOAT z, FLOAT *res, void *parm) \
+{ \
+    FLOAT res_u[3]; \
+    func_u(x, y, z, res_u, parm); \
+    *res = res_u[n]; \
+    return 1; \
 }
+
+DEFINE_FUNC_GD(0)
+DEFINE_FUNC_GD(1)
+DEFINE_FUNC_GD(2)
+
+static FUNC3D_P func_gD[3] = {func_gD_0, func_gD_1, func_gD_2};
 
 #define func_gN		func_grad_u
 
@@ -475,7 +484,7 @@ EBUG && defined(PHG_TO_P4EST)
 #endif
 
 /* function numbers in the QCACHE objects */
-static int Q_f, Q_gD, Q_gN;
+static int Q_f, Q_gD[3], Q_gN;
 
 /* factorial function */
 int factorial(unsigned int n) 
@@ -714,14 +723,14 @@ do_face(SOLVER *solver, XFEM_INFO *xi, QCACHE *qc[],
 					{ /* Dirichlet boundary */
 						/* -\beta\int_\Gamma_D g_D (A\grad v).n */
 						a = phgQCIntegrateFace(
-										qc[pno], e->index, face, Q_gD, PROJ_NONE, 0,
+										qc[pno], e->index, face, Q_gD[d], PROJ_NONE, 0,
 										qc[pno], e->index, face, Q_GRAD, PROJ_DOT, i) *
 								Coeff(pno);
 						val = -beta * a;
 
 						/* G0 \int_\Gamma_D g_D v */
 						a = phgQCIntegrateFace(
-								qc[pno], e->index, face, Q_gD, PROJ_NONE, 0,
+								qc[pno], e->index, face, Q_gD[d], PROJ_NONE, 0,
 								qc[pno], e->index, face, Q_BAS, PROJ_NONE, i);
 						val += G0 * a;
 						/* Add tangential penalty term on curved boundary/interface */
@@ -925,17 +934,17 @@ do_face(SOLVER *solver, XFEM_INFO *xi, QCACHE *qc[],
 	val += Coe(i) * G1 * (i < n ? a : -a);
 
 	/* -beta \int [jD] {(A\grad v).n} (func[1] := gD) */
-	a = phgQCIntegrateFace(qc[pno],  e->index,  face,  Q_gD,   PROJ_NONE, 0,
+	a = phgQCIntegrateFace(qc[pno],  e->index,  face,  Q_gD[d],   PROJ_NONE, 0,
 			       Qc(i), Eid(i), Fac(i), Q_GRAD, PROJ_DOT, Bas(i));
-	b = phgQCIntegrateFace(qc[pno1], e1->index, face1, Q_gD,   PROJ_NONE, 0,
+	b = phgQCIntegrateFace(qc[pno1], e1->index, face1, Q_gD[d],   PROJ_NONE, 0,
 			       Qc(i), Eid(i), Fac(i), Q_GRAD, PROJ_DOT, Bas(i));
 	a -= b;
 	val += -beta * 0.5 * Coe(i) * a;
 
 	/* G0 \int [jD] [v] */
-	a = phgQCIntegrateFace(qc[pno],  e->index,  face,  Q_gD,  PROJ_NONE, 0,
+	a = phgQCIntegrateFace(qc[pno],  e->index,  face,  Q_gD[d],  PROJ_NONE, 0,
 			       Qc(i), Eid(i), Fac(i), Q_BAS, PROJ_NONE, Bas(i));
-	b = phgQCIntegrateFace(qc[pno1], e1->index, face1, Q_gD,  PROJ_NONE, 0,
+	b = phgQCIntegrateFace(qc[pno1], e1->index, face1, Q_gD[d],  PROJ_NONE, 0,
 			       Qc(i), Eid(i), Fac(i), Q_BAS, PROJ_NONE, Bas(i));
 	a -= b;
 	val += G0 * (i < n ? a : -a);
@@ -1029,14 +1038,18 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 	int k;
 	/* for local DG */
 	FLOAT e1_data[] = {1., 0., 0.}, e2_data[] = {0., 1., 0.}, e3_data[] = {0., 0., 1.};
+	FLOAT e_data[3][3] = {1., 0., 0., 0., 1., 0. ,0., 0., 1.};
 	MAT *M, *C, *tmp; /* mass matrix M, coefficient matrix C, */
 
 	qc = phgXFEMQCNew(xi, u_h);
 	for (k = 0; k < xi->nd; k++) {
 		/* Note: same values for Q_{f,gD,gN} should be got with different k */
 		Q_f = phgQCAddFEFunction(qc[k], f_h[k]);
-		Q_gD = phgQCAddXYZFunctionP(qc[k], func_gD, 1, &k, sizeof(k));
-		// Q_gN = phgQCAddXYZFunctionP(qc[k], func_gN, 3, &k, sizeof(k));
+		for (int d = 0; d < Dim; d++){
+			Q_gD[d] = phgQCAddXYZFunctionP(qc[k], func_gD[d], 1, &k, sizeof(k));
+			Q_vecBAS[d] = phgQCAddConstantCoefficient(qc[k], e_data[d], Dim, Q_BAS);
+		}
+		Q_gN = phgQCAddXYZFunctionP(qc[k], func_gN, 9, &k, sizeof(k));
 		if (!LDG)
 			continue;
 		Q_BAS1 = phgQCAddConstantCoefficient(qc[k], e1_data, Dim, Q_BAS);
@@ -1093,7 +1106,6 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 				phgQCSetRule(qc[rl[k].pno1], rl[k].rule, -1.);
 			do_face(solver, xi, qc, e, -1, rl[k].pno,
 							e, -1, rl[k].pno1, __LINE__);
-			phgPrintf("debug\n\n\n");
 			continue;
 		}
 		/* volume rule */
@@ -1127,7 +1139,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 				}
 
 				/* \int_T f1 v */
-				val = phgQCIntegrate(qc[rl[k].pno], eno, Q_BAS, i,
+				val = phgQCIntegrate(qc[rl[k].pno], eno, Q_vecBAS[d], i,
 														qc[rl[k].pno], eno, Q_f, 0);
 				phgSolverAddGlobalRHSEntry(solver, I, val);
 				DebugRHS
@@ -1699,6 +1711,8 @@ break;
 	H1norm = L2norm = Sqrt(phgXFEMDofDot(xi, err, err));
 	H1norm += Sqrt(phgXFEMDofDot(xi, gerr, gerr));
 
+	phgPrintf("\ndebug1\n\n");
+
 	/* adjust norms by the numerical solution */
 	d = Sqrt(phgXFEMDofDot(xi, u_h, u_h));
 	if (L2norm < d)
@@ -1706,11 +1720,14 @@ break;
 	d = L2norm + Sqrt(phgXFEMDofDot(xi, gu_h, gu_h));
 	if (H1norm < d)
 	    H1norm = d;
+	phgPrintf("\ndebug2\n\n");
 
 	/* norms of the numerical error */
 	phgXFEMDofAXPY(xi, -1.0, u_h, &err);
+	phgPrintf("\ndebug3\n\n");
 	H1err = L2err = Sqrt(Fabs(phgXFEMDofDot(xi, err, err)));
 	phgXFEMDofAXPY(xi, -1.0, gu_h, &gerr);
+	phgPrintf("\ndebug4\n\n");
 	phgXFEMDofFree(xi, gu_h);
 	H1err += Sqrt(Fabs(phgXFEMDofDot(xi, gerr, gerr)));
 	phgXFEMDofFree(xi, gerr);
