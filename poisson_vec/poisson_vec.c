@@ -41,7 +41,7 @@
  * 	\Omega^- := \Omega \cap \{x: L(x)<0\},
  * 	\Omega^+ := \Omega \cap \{x: L(x)>0\},
  * 	\Gamma	 := \Omega \cap \{x: L(x)=0\},
- * 	a := COEFF1 for x\in\Omega^- and COEFF32 for x\in\Omega^+,
+ * 	a := COEFF1 for x\in\Omega^- and COEFF2 for x\in\Omega^+,
  * and L(x) is the level-set function defined by ls_func(). In this case the
  * jump conditions at the interface are given by:
  *		      [u] = j_D,	on \Gamma,
@@ -109,7 +109,7 @@ BOOLEAN no_jump = FALSE;
  */
 static INT sol_order = -1;
 
-static BOOLEAN dump_solver = FALSE, dump_reorder = TRUE;
+static BOOLEAN dump_solver = FALSE, dump_reorder = FALSE;
 
 /* analytic solution */
 /*static*/ int
@@ -119,6 +119,11 @@ func_u(FLOAT x, FLOAT y, FLOAT z, FLOAT *res, void *parm)
 
     switch (func_no) {
 	case 0:
+			if (sol_order == -200) {
+				res[0] = Cos(x * y * z);
+				res[1] = Cos(x * y * z);
+				res[2] = 0;
+			}
       if (sol_order == -100) {
         res[0] = Exp(x * y);
         res[1] = Exp(y * z);
@@ -256,6 +261,13 @@ func_f(FLOAT x, FLOAT y, FLOAT z, FLOAT *res, void *parm)
 
   switch (func_no) {
   case 0:
+    if (sol_order == -200) {
+      res[0] = (x * x * y * y + x * x * z * z + y * y * z * z) 
+						  	* Cos(x * y * z) * Coeff(0);
+			res[1] = (x * x * y * y + x * x * z * z + y * y * z * z) 
+						  	* Cos(x * y * z) * Coeff(0);
+			res[2] = 0;
+    }
     if (sol_order == -100) {
       res[0] = (x * x + y * y) * Exp(x * y) * Coeff(0);
       res[1] = (y * y + z * z) * Exp(y * z) * Coeff(0);
@@ -1035,14 +1047,13 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 	GRID *g = u_h[0]->g;
 	QCACHE **qc;
 	ELEMENT *e;
-	int k;
 	/* for local DG */
 	FLOAT e1_data[] = {1., 0., 0.}, e2_data[] = {0., 1., 0.}, e3_data[] = {0., 0., 1.};
 	FLOAT e_data[3][3] = {1., 0., 0., 0., 1., 0. ,0., 0., 1.};
 	MAT *M, *C, *tmp; /* mass matrix M, coefficient matrix C, */
 
 	qc = phgXFEMQCNew(xi, u_h);
-	for (k = 0; k < xi->nd; k++) {
+	for (int k = 0; k < xi->nd; k++) {
 		/* Note: same values for Q_{f,gD,gN} should be got with different k */
 		Q_f = phgQCAddFEFunction(qc[k], f_h[k]);
 		for (int d = 0; d < Dim; d++){
@@ -1062,7 +1073,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 		M->handle_bdry_eqns = FALSE;
 		C = phgMapCreateMat(solver->mat->rmap, solver->mat->cmap);
 		C->handle_bdry_eqns = FALSE;
-		for (k = 0; k < Dim; k++) {
+		for (int k = 0; k < Dim; k++) {
 			B[k] = phgMapCreateMat(solver->mat->rmap, solver->mat->cmap);
 			B[k]->handle_bdry_eqns = FALSE;
 			F[k] = phgMapCreateVec(solver->mat->cmap, 1);
@@ -1072,7 +1083,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 			int i, N;
 			INT I;
 			FLOAT val;
-			for (k = 0; k < xi->nd; k++)
+			for (int k = 0; k < xi->nd; k++)
 			{
 				N = phgQCGetNBas(qc[k], e->index);
 				for (i = 0; i < N; i++)
@@ -1096,7 +1107,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 
 	/*==================== element ====================*/
 	nr = phgXFEMGetRules(xi, eno, -1, RL_ALL, &rl);
-	for (k = 0; k < nr; k++) {
+	for (int k = 0; k < nr; k++) {
 		if (rl[k].iflag) { /* interface rule */
 			if (rl[k].pno1 == rl[k].pno)
 				continue; /* false/dummy interface (can apply inner BC) */
@@ -1172,7 +1183,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 		}
 		nr = phgXFEMGetRulesFace(xi, eno, face, -1, &rl);
 		/*assert(nr > 0 || xi->nd <= xi->npart || xi->g_tet != NULL);*/
-		for (k = 0; k < nr; k++) {
+		for (int k = 0; k < nr; k++) {
 			if (rl[k].pno < xi->nd)
 				phgQCSetRule(qc[rl[k].pno], rl[k].rule, -1.);
 			if (rl[k].iflag) {
@@ -1242,7 +1253,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 	for (int pno = 0; pno < xi->nd; pno++)
 	    if (GetMacro(xi, e->index, pno) < 0 &&
 		!phgXFEMOffside(xi, e->index, pno)) {
-		cnts0[phgXFEMDofType_(xi, u_h[0], e, -1, FALSE, NULL)->order]++;
+		cnts0[phgXFEMDofType(xi, u_h[pno], e, -1)->order]++;
 		cnts0[0]++; /* total count */
 	}
 # if USE_MPI
@@ -1270,7 +1281,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[])
 #endif	/* defined(PHG_TO_P4EST) */
 
     double np = 0.;
-    for (k = 0; k < xi->nd; k++)
+    for (int k = 0; k < xi->nd; k++)
 	np += phgQCTotalNP(qc[k], g->comm);
     assert(np <= ULONG_MAX);
     phgPrintf("  Total # quadrature points: %llu\n", (unsigned long)np);
@@ -1675,9 +1686,10 @@ break;
 	phgPrintf("  Wall time: %0.2lgs, memory usage: %0.2lfGB\n",
 		  phgGetTime(NULL)-t, (double)mem_peak/(1024.*1024.*1024.));
 
+	u_old = phgXFEMDofCopy(xi, u_h, NULL, NULL, "u_old");    
+
 	phgPrintf("Solving linear equations ...\n");
 	t = phgGetTime(NULL);
-	u_old = phgXFEMDofCopy(xi, u_h, NULL, NULL, "u_old");    
 
 	if (debug_pre)
 	    /* debug to_DG/pre_solver with "-sol_order=-99 -added_order=15",
@@ -1702,7 +1714,7 @@ break;
 	/* compute L2 and H1 errors */
 	t = phgGetTime(NULL);
 
-	err = phgXFEMDofNew(xi, DOF_DEFAULT, 1, "error", DofNoAction);
+	err = phgXFEMDofNew(xi, DOF_DEFAULT, 3, "error", DofNoAction);
 	phgXFEMDofSetDataByFunction(xi, err, func_u);
 	gu_h = phgXFEMDofGradient(xi, u_h, NULL, NULL, NULL);
 	gerr = phgXFEMDofGradient(xi, err, NULL, NULL, NULL);
@@ -1711,8 +1723,6 @@ break;
 	H1norm = L2norm = Sqrt(phgXFEMDofDot(xi, err, err));
 	H1norm += Sqrt(phgXFEMDofDot(xi, gerr, gerr));
 
-	phgPrintf("\ndebug1\n\n");
-
 	/* adjust norms by the numerical solution */
 	d = Sqrt(phgXFEMDofDot(xi, u_h, u_h));
 	if (L2norm < d)
@@ -1720,14 +1730,11 @@ break;
 	d = L2norm + Sqrt(phgXFEMDofDot(xi, gu_h, gu_h));
 	if (H1norm < d)
 	    H1norm = d;
-	phgPrintf("\ndebug2\n\n");
 
 	/* norms of the numerical error */
 	phgXFEMDofAXPY(xi, -1.0, u_h, &err);
-	phgPrintf("\ndebug3\n\n");
 	H1err = L2err = Sqrt(Fabs(phgXFEMDofDot(xi, err, err)));
 	phgXFEMDofAXPY(xi, -1.0, gu_h, &gerr);
-	phgPrintf("\ndebug4\n\n");
 	phgXFEMDofFree(xi, gu_h);
 	H1err += Sqrt(Fabs(phgXFEMDofDot(xi, gerr, gerr)));
 	phgXFEMDofFree(xi, gerr);
