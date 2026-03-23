@@ -1132,7 +1132,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *f_h[], DOF *
 		for (int d = 0; d < Dim; d++){
 			Q_gD[d] = phgQCAddXYZFunctionP(qc[k], func_gD[d], 1, &k, sizeof(k));			/* u_d */
 			Q_vecBAS[d] = phgQCAddConstantCoefficient(qc[k], e_data[d], Dim, Q_BAS);	/* Vector basis */
-			Q_gN[d] = phgQCAddXYZFunctionP(qc[k], func_gN[d], Dim, &k, sizeof(k));			/* \grad u_d */
+			Q_gN[d] = phgQCAddXYZFunctionP(qc[k], func_gN[d], Dim, &k, sizeof(k));		/* \grad u_d */
 		}
 		if (!LDG)
 			continue;
@@ -1726,7 +1726,7 @@ break;
 	    phgOptionsSetOptions("-solver gmres");
 	solver = phgXFEMSolverCreate(xi, SOLVER_DEFAULT, 0, u_h, NULL);
 	solver->mat->handle_bdry_eqns = FALSE;
-	solver->rtol = solver->btol = 1e-12;
+	solver->rtol = solver->btol = 1e-10;
 	// if (use_pc) {
   //     phgSolverXASPSetMG(pc, g, u_h[0]->type->order);
   //     phgSolverXASPSetXFEMINFO(pc, xi); 
