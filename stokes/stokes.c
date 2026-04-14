@@ -592,7 +592,7 @@ EBUG && defined(PHG_TO_P4EST)
 #endif
 
 /* function numbers in the QCACHE objects */
-static int Q_p, Q_f, Q_vecgD, Q_gD[3], Q_gN[3];
+static int Q_f, Q_vecgD, Q_gD[3], Q_gN[3];
 
 /* factorial function */
 int factorial(unsigned int n) 
@@ -652,7 +652,7 @@ ghost_penalty(SOLVER *solver, XFEM_INFO *xi, DOF *u_h,
 	GRID *g = xi->g;
   int n, n1, p;   /* p = polynomial order */
   INT I, J;
-  int i, j, k;
+  int i, j;
 	int eno = e->index, eno1 = e1->index;
 	FLOAT a, val, nv[Dim], *rule;
 	FLOAT h, G2; /* G2 = coeff*gamma2*h^(2k-1)/[(k-1)!]*/
@@ -1052,6 +1052,7 @@ do_face(SOLVER *solver, XFEM_INFO *xi, QCACHE *qc[], QCACHE *qc_p[],
 				}
 			}
 
+			/* (u.n, q)_GammaD, (v.n, p)_GammaD */
 			for (m = 0; m < P + P1; m++) {
 				/* skip jumps for interior face and continuous element */
 				if (p_h->type->fe_space == FE_H1 && e != e1 && e1 != NULL
@@ -1221,9 +1222,9 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *p_h[], DOF *
 		Q_vecgD = phgQCAddXYZFunctionP(qc[k], func_u, 3, &k, sizeof(k));	/* u=(u1,u2,u3) */
 		for (int d = 0; d < Dim; d++){
 			Q_gD[d] = phgQCAddXYZFunctionP(qc[k], func_gD[d], 1, &k, sizeof(k));	/* u_d */
+			Q_gN[d] = phgQCAddXYZFunctionP(qc[k], func_gN[d], 3, &k, sizeof(k));	/* \grad u_d */
 			Q_vecBAS[d] = phgQCAddConstantCoefficient(qc[k], e_data[d], Dim, Q_BAS);	/* Vector basis: u */
 			Qp_vecBAS[d] = phgQCAddConstantCoefficient(qc_p[k], e_data[d], Dim, Q_BAS);	/* Vector basis: p */
-			Q_gN[d] = phgQCAddXYZFunctionP(qc[k], func_gN[d], 3, &k, sizeof(k));	/* \grad u_d */
 		}
 		if (!LDG)
 			continue;
@@ -1265,7 +1266,7 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *p_h[], DOF *
 #endif	/* USE_OMP */
   ForAllElementsBegin(g, e) {
 	RULE_LIST *rl;
-	INT N, I, J, P, M, eno = e->index, eno1 = -1;
+	INT N, P, I, J, K, eno = e->index, eno1 = -1;
 	int i, j, m, face = -1, face1 = -1, nr;
 	FLOAT val, val_p;
 
@@ -1336,14 +1337,14 @@ build_linear_system(XFEM_INFO *xi, SOLVER *solver, DOF *u_h[], DOF *p_h[], DOF *
 
 			/* Bt: same row as A; B: same col as A */
 			for (m = 0; m < P; m++) {
-				M = phgXFEMSolverMapE2G(xi, solver, 1, rl[k].pno, e, m);
+				K = phgXFEMSolverMapE2G(xi, solver, 1, rl[k].pno, e, m);
 				for (int d = 0; d < Dim; d++) {
 					/* \int_T \div{phi_j} * \psi_m */
 					val_p = -phgQCIntegrate(qc[rl[k].pno], eno, Q_GRAD, i,
 																 qc_p[rl[k].pno], eno, Qp_vecBAS[d], m);
 					I = phgXFEMSolverMapE2G(xi, solver, 0, rl[k].pno, e, i * Dim + d);
-					phgSolverAddGlobalMatrixEntry(solver, I, M, val_p);	/* Bt */
-					phgSolverAddGlobalMatrixEntry(solver, M, I, val_p); /* B */
+					phgSolverAddGlobalMatrixEntry(solver, I, K, val_p);	/* Bt */
+					phgSolverAddGlobalMatrixEntry(solver, K, I, val_p); /* B */
 				}
 			}
 		}
@@ -1854,10 +1855,12 @@ break;
 	}
 #endif	/* USE_MPI */
 
-	phgPrintf("Building linear equations (%"dFMT" elems, FE: %s/%s) ...\n"
+	phgPrintf("Building linear equations (%"dFMT" elems, FE of uh: %s/%s, FE of ph: %s/%s) ...\n"
 		  "  Element sizes: max/min = %0.2le/%0.2le = %d\n",
 			g->nelem_global, u_h[0]->type->name,
 			phgXFEMDofTypeName(xi,u_h[0],NULL,0),
+			p_h[0]->type->name,
+			phgXFEMDofTypeName(xi,p_h[0],NULL,0),
 			h_max, h_min, (int)(h_max/h_min+0.5));
 
 	phgSetupHalo(g, HALO_FACE);	/* HALO_FACE is needed for DG */
