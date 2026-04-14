@@ -114,7 +114,7 @@ BOOLEAN no_jump = FALSE;
  */
 static INT sol_order = -1;
 
-static BOOLEAN dump_solver = FALSE, dump_reorder = TRUE;
+static BOOLEAN dump_solver = FALSE, dump_reorder = FALSE;
 
 /* analytic solution */
 /*static*/ int
